@@ -1,0 +1,112 @@
+"Name: \PR:SAPLAIST\FO:UPDATE_PREPARE\SE:BEGIN\EI
+ENHANCEMENT 0 ZENH_ACTFIJO.
+*
+
+  DATA: WA_AF TYPE ZCFDITT_DMAF.
+
+  IF SY-TCODE EQ 'AS01' OR SY-TCODE EQ 'AS02' OR SY-TCODE EQ 'AS03'.
+
+    IF anla-anln1 IS NOT INITIAL.
+      DATA V_ANS.
+      IF SY-TCODE EQ 'AS02' OR SY-TCODE EQ 'AS03'.
+        CALL FUNCTION 'POPUP_TO_CONFIRM'
+          EXPORTING
+            TITLEBAR        = 'Activo Fijo'
+            TEXT_QUESTION   = '¿Desea modificar datos de facturación?'
+            TEXT_BUTTON_1   = 'SI'
+            ICON_BUTTON_1   = 'ICON_OKAY'
+            TEXT_BUTTON_2   = 'NO'
+            ICON_BUTTON_2   = 'ICON_CANCEL'
+          IMPORTING
+            ANSWER   = V_ANS.
+      ENDIF.
+
+    IF ( SY-TCODE EQ 'AS01' AND V_ANS IS INITIAL ) OR ( ( SY-TCODE EQ 'AS02' OR SY-TCODE EQ 'AS03' ) AND V_ANS EQ '1' ).
+      DATA: IT_FIELD   TYPE STANDARD TABLE OF SVAL,
+            WA_FIELD   TYPE SVAL,
+            V_TEXT     TYPE STRING,
+            WA_DMAF    TYPE ZCFDITT_DMAF,
+            WA_ASLA    TYPE ANLA,
+            VL_SIGUE   TYPE C LENGTH 1 VALUE 'X',
+            VL_NEXT    TYPE C LENGTH 1 VALUE 'X',
+            IT_MESSAGE TYPE ESP1_MESSAGE_TAB_TYPE,
+            WA_MESSAGE TYPE ESP1_MESSAGE_WA_TYPE.
+
+      V_TEXT = 'Información para facturación del Activo Fijo.'.
+
+      SELECT SINGLE * FROM ZCFDITT_DMAF
+        INTO WA_AF
+      WHERE BUKRS EQ anla-BUKRS    AND
+            ANLKL EQ anla-ANLKL    AND
+            GJAHR EQ anla-ERDAT(4) AND
+            ANLN1 EQ anla-ANLN1.
+
+      WA_FIELD-TABNAME = 'ZCFDITT_DMAF'.
+      WA_FIELD-FIELDNAME = 'CVSAT'.
+      IF SY-TCODE EQ 'AS02' OR SY-TCODE EQ 'AS03'.
+        WA_FIELD-VALUE = WA_AF-CVSAT.
+      ENDIF.
+      APPEND WA_FIELD TO IT_FIELD.
+
+      WA_FIELD-TABNAME = 'ZCFDITT_DMAF'.
+      WA_FIELD-FIELDNAME = 'CVUNI'.
+      IF SY-TCODE EQ 'AS02' OR SY-TCODE EQ 'AS03'.
+        WA_FIELD-VALUE = WA_AF-CVUNI.
+      ENDIF.
+      APPEND WA_FIELD TO IT_FIELD.
+
+      WA_FIELD-TABNAME = 'ZCFDITT_DMAF'.
+      WA_FIELD-FIELDNAME = 'DESUN'.
+      IF SY-TCODE EQ 'AS02' OR SY-TCODE EQ 'AS03'.
+        WA_FIELD-VALUE = WA_AF-DESUN.
+      ENDIF.
+      APPEND WA_FIELD TO IT_FIELD.
+
+      WA_FIELD-TABNAME = 'ZCFDITT_DMAF'.
+      WA_FIELD-FIELDNAME = 'UCFDI'.
+      IF SY-TCODE EQ 'AS02' OR SY-TCODE EQ 'AS03'.
+        WA_FIELD-VALUE = WA_AF-UCFDI.
+      ENDIF.
+      APPEND WA_FIELD TO IT_FIELD.
+
+      WHILE VL_SIGUE EQ 'X'.
+        CLEAR: VL_NEXT.
+        CALL FUNCTION 'POPUP_GET_VALUES'
+          EXPORTING
+            POPUP_TITLE  = V_TEXT
+            START_COLUMN = '1'
+            START_ROW    = '1'
+          TABLES
+            FIELDS       = IT_FIELD.
+
+        LOOP AT IT_FIELD INTO WA_FIELD.
+          IF WA_FIELD-VALUE IS INITIAL.
+            MOVE: 'X' TO VL_SIGUE,
+                  'X' TO VL_NEXT.
+
+            MOVE: 'E'   TO WA_MESSAGE-MSGTY,
+                  'F5'  TO WA_MESSAGE-MSGID,
+                  '001' TO WA_MESSAGE-MSGNO.
+            APPEND WA_MESSAGE TO IT_MESSAGE.
+
+            CALL FUNCTION 'C14Z_MESSAGES_SHOW_AS_POPUP'
+              TABLES
+                I_MESSAGE_TAB = IT_MESSAGE.
+
+            EXIT.
+          ENDIF.
+        ENDLOOP.
+        IF VL_NEXT IS INITIAL.
+          CLEAR: VL_SIGUE.
+        ENDIF.
+      ENDWHILE.
+
+     ENDIF.
+
+    ENDIF.
+
+  ENDIF.
+
+
+
+ENDENHANCEMENT.
